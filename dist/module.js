@@ -6542,13 +6542,13 @@ var processData = function processData(data) {
   }
 
   return [{
-    label: 'Passing By',
+    label: 'Total Detected',
     quantity: total
   }, {
     label: 'Visitors',
     quantity: visitors
   }, {
-    label: 'Loyalty',
+    label: 'Returning Customers',
     quantity: 0
   }];
 };
