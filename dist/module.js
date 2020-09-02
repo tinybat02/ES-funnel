@@ -6530,14 +6530,13 @@ var processData = function processData(data) {
   var visitors = 0;
 
   for (var i = 0; i < data.length; i++) {
-    total += data[i].fields[0].values.buffer.reverse().find(function (n) {
+    var num = data[i].fields[0].values.buffer.reverse().find(function (n) {
       return n != null;
     }) || 0;
+    total += num;
 
     if (data[i].fields[0].name == '01-180m') {
-      visitors = data[i].fields[0].values.buffer.reverse().find(function (n) {
-        return n != null;
-      }) || 0;
+      visitors = num;
     }
   }
 
