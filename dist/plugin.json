@@ -1,0 +1,21 @@
+{
+  "type": "panel",
+  "name": "ES Funnel",
+  "id": "orgid-es-funnel-panel",
+  "dataFormats": ["table"],
+  "info": {
+    "description": "ES Funnel",
+    "author": {
+      "name": "Nam Le"
+    },
+    "keywords": ["funnel"],
+    "screenshots": [],
+    "version": "1.0.0",
+    "updated": "2020-09-02"
+  },
+
+  "dependencies": {
+    "grafanaVersion": "6.3.x",
+    "plugins": []
+  }
+}
