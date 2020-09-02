@@ -6542,7 +6542,7 @@ var processData = function processData(data) {
   }
 
   return [{
-    label: 'Total Detected',
+    label: 'Bypassers',
     quantity: total
   }, {
     label: 'Visitors',

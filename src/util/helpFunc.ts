@@ -10,7 +10,7 @@ export const processData = (data: Array<Frame>) => {
     }
   }
   return [
-    { label: 'Total Detected', quantity: total },
+    { label: 'Bypassers', quantity: total },
     { label: 'Visitors', quantity: visitors },
     { label: 'Returning Customers', quantity: 0 },
   ];
