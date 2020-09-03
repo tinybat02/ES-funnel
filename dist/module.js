@@ -469,25 +469,38 @@ function _createClass(Constructor, protoProps, staticProps) {
 }
 
 function _toConsumableArray(arr) {
-  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
 }
 
 function _arrayWithoutHoles(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
+  if (Array.isArray(arr)) return _arrayLikeToArray(arr);
 }
 
 function _iterableToArray(iter) {
-  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+  if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
+}
+
+function _unsupportedIterableToArray(o, minLen) {
+  if (!o) return;
+  if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+  var n = Object.prototype.toString.call(o).slice(8, -1);
+  if (n === "Object" && o.constructor) n = o.constructor.name;
+  if (n === "Map" || n === "Set") return Array.from(o);
+  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+}
+
+function _arrayLikeToArray(arr, len) {
+  if (len == null || len > arr.length) len = arr.length;
+
+  for (var i = 0, arr2 = new Array(len); i < len; i++) {
+    arr2[i] = arr[i];
+  }
+
+  return arr2;
 }
 
 function _nonIterableSpread() {
-  throw new TypeError("Invalid attempt to spread non-iterable instance");
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }
 
 var roundPoint = function roundPoint(number) {
@@ -1268,22 +1281,23 @@ var FontFaceRule = /*#__PURE__*/function () {
       var str = '';
 
       for (var index = 0; index < this.style.length; index++) {
-        str += toCss(this.key, this.style[index]);
+        str += toCss(this.at, this.style[index]);
         if (this.style[index + 1]) str += '\n';
       }
 
       return str;
     }
 
-    return toCss(this.key, this.style, options);
+    return toCss(this.at, this.style, options);
   };
 
   return FontFaceRule;
 }();
 
+var keyRegExp$2 = /@font-face/;
 var pluginFontFaceRule = {
   onCreateRule: function onCreateRule(key, style, options) {
-    return key === '@font-face' ? new FontFaceRule(key, style, options) : null;
+    return keyRegExp$2.test(key) ? new FontFaceRule(key, style, options) : null;
   }
 };
 
@@ -1425,7 +1439,9 @@ var RuleList = /*#__PURE__*/function () {
       Renderer: Renderer,
       generateId: generateId,
       scoped: scoped,
-      name: name
+      name: name,
+      keyframes: this.keyframes,
+      selector: undefined
     }, ruleOptions); // When user uses .createStyleSheet(), duplicate names are not possible, but
     // `sheet.addRule()` opens the door for any duplicate rule name. When this happens
     // we need to make the key unique within this RuleList instance scope.
@@ -1485,10 +1501,10 @@ var RuleList = /*#__PURE__*/function () {
   ;
 
   _proto.process = function process() {
-    var plugins$$1 = this.options.jss.plugins; // We need to clone array because if we modify the index somewhere else during a loop
+    var plugins = this.options.jss.plugins; // We need to clone array because if we modify the index somewhere else during a loop
     // we end up with very hard-to-track-down side effects.
 
-    this.index.slice(0).forEach(plugins$$1.onProcessRule, plugins$$1);
+    this.index.slice(0).forEach(plugins.onProcessRule, plugins);
   }
   /**
    * Register a rule in `.map`, `.classes` and `.keyframes` maps.
@@ -1562,7 +1578,7 @@ var RuleList = /*#__PURE__*/function () {
     }
 
     var _this$options2 = this.options,
-        plugins$$1 = _this$options2.jss.plugins,
+        plugins = _this$options2.jss.plugins,
         sheet = _this$options2.sheet; // It is a rules container like for e.g. ConditionalRule.
 
     if (rule.rules instanceof RuleList) {
@@ -1572,11 +1588,11 @@ var RuleList = /*#__PURE__*/function () {
 
     var styleRule = rule;
     var style = styleRule.style;
-    plugins$$1.onUpdate(data, rule, sheet, options); // We rely on a new `style` ref in case it was mutated during onUpdate hook.
+    plugins.onUpdate(data, rule, sheet, options); // We rely on a new `style` ref in case it was mutated during onUpdate hook.
 
     if (options.process && style && style !== styleRule.style) {
       // We need to run the plugins in case new `style` relies on syntax plugins.
-      plugins$$1.onProcessStyle(styleRule.style, styleRule, sheet); // Update and add props.
+      plugins.onProcessStyle(styleRule.style, styleRule, sheet); // Update and add props.
 
       for (var prop in styleRule.style) {
         var nextValue = styleRule.style[prop];
@@ -2549,7 +2565,7 @@ var instanceCounter = 0;
 var Jss = /*#__PURE__*/function () {
   function Jss(options) {
     this.id = instanceCounter++;
-    this.version = "10.0.4";
+    this.version = "10.4.0";
     this.plugins = new PluginsRegistry();
     this.options = {
       id: {
@@ -2650,7 +2666,7 @@ var Jss = /*#__PURE__*/function () {
    */
   ;
 
-  _proto.createRule = function createRule$$1(name, style, options) {
+  _proto.createRule = function createRule$1(name, style, options) {
     if (style === void 0) {
       style = {};
     }
@@ -2661,8 +2677,10 @@ var Jss = /*#__PURE__*/function () {
 
 
     if (_typeof2(name) === 'object') {
+      // $FlowIgnore
       return this.createRule(undefined, name, style);
-    }
+    } // $FlowIgnore
+
 
     var ruleOptions = _extends({}, options, {
       name: name,
@@ -2685,11 +2703,11 @@ var Jss = /*#__PURE__*/function () {
   _proto.use = function use() {
     var _this = this;
 
-    for (var _len = arguments.length, plugins$$1 = new Array(_len), _key = 0; _key < _len; _key++) {
-      plugins$$1[_key] = arguments[_key];
+    for (var _len = arguments.length, plugins = new Array(_len), _key = 0; _key < _len; _key++) {
+      plugins[_key] = arguments[_key];
     }
 
-    plugins$$1.forEach(function (plugin) {
+    plugins.forEach(function (plugin) {
       _this.plugins.use(plugin);
     });
     return this;
@@ -2765,13 +2783,22 @@ function functionPlugin() {
         // Empty object will remove all currently defined props
         // in case function rule returns a falsy value.
         styleRule.style = fnRule(data) || {};
+
+        if (true) {
+          for (var prop in styleRule.style) {
+            if (typeof styleRule.style[prop] === 'function') {
+               true ? warning(false, '[JSS] Function values inside function rules are not supported.') : undefined;
+              break;
+            }
+          }
+        }
       }
 
       var fnValues = styleRule[fnValuesNs]; // If we have a fn values map, it is a rule with function values.
 
       if (fnValues) {
-        for (var prop in fnValues) {
-          styleRule.prop(prop, fnValues[prop](data), options);
+        for (var _prop in fnValues) {
+          styleRule.prop(_prop, fnValues[_prop](data), options);
         }
       }
     }
@@ -3077,8 +3104,6 @@ function jssGlobal() {
     onProcessRule: onProcessRule
   };
 }
-/* eslint-disable no-use-before-define */
-
 
 var isObject = function isObject(obj) {
   return obj && _typeof2(obj) === 'object' && !Array.isArray(obj);
@@ -3108,12 +3133,16 @@ function mergeExtend(style, rule, sheet, newStyle) {
     }
 
     return;
-  } // Extend using an array of objects.
+  } // Extend using an array.
 
 
   if (Array.isArray(style.extend)) {
     for (var index = 0; index < style.extend.length; index++) {
-      extend(style.extend[index], rule, sheet, newStyle);
+      var singleExtend = style.extend[index];
+      var singleStyle = typeof singleExtend === 'string' ? _extends({}, style, {
+        extend: singleExtend
+      }) : style.extend[index];
+      extend(singleStyle, rule, sheet, newStyle);
     }
 
     return;
@@ -3199,6 +3228,7 @@ function jssExtend() {
     if (_typeof2(value) === 'object') {
       // $FlowFixMe: This will be an object
       for (var _key in value) {
+        // $FlowFixMe: This will be an object
         rule.prop(_key, value[_key]);
       } // $FlowFixMe: Flow complains because there is no indexer property in StyleRule
 
@@ -3641,12 +3671,10 @@ function iterate(prop, value, options) {
       }
     }
   } else if (typeof value === 'number') {
-    if (options[prop]) {
-      return "" + value + options[prop];
-    }
+    var unit = options[prop] || units[prop];
 
-    if (units[prop]) {
-      return typeof units[prop] === 'function' ? units[prop](value).toString() : "" + value + units[prop];
+    if (unit) {
+      return typeof unit === 'function' ? unit(value).toString() : "" + value + unit;
     }
 
     return value.toString();
@@ -4072,26 +4100,39 @@ function jssExpand() {
   };
 }
 
-function _arrayWithoutHoles$1(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }
+function _arrayLikeToArray$1(arr, len) {
+  if (len == null || len > arr.length) len = arr.length;
 
-    return arr2;
+  for (var i = 0, arr2 = new Array(len); i < len; i++) {
+    arr2[i] = arr[i];
   }
+
+  return arr2;
+}
+
+function _arrayWithoutHoles$1(arr) {
+  if (Array.isArray(arr)) return _arrayLikeToArray$1(arr);
 }
 
 function _iterableToArray$1(iter) {
-  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+  if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
+}
+
+function _unsupportedIterableToArray$1(o, minLen) {
+  if (!o) return;
+  if (typeof o === "string") return _arrayLikeToArray$1(o, minLen);
+  var n = Object.prototype.toString.call(o).slice(8, -1);
+  if (n === "Object" && o.constructor) n = o.constructor.name;
+  if (n === "Map" || n === "Set") return Array.from(o);
+  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray$1(o, minLen);
 }
 
 function _nonIterableSpread$1() {
-  throw new TypeError("Invalid attempt to spread non-iterable instance");
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }
 
 function _toConsumableArray$1(arr) {
-  return _arrayWithoutHoles$1(arr) || _iterableToArray$1(arr) || _nonIterableSpread$1();
+  return _arrayWithoutHoles$1(arr) || _iterableToArray$1(arr) || _unsupportedIterableToArray$1(arr) || _nonIterableSpread$1();
 } // Export javascript style and css style vendor prefixes.
 
 
@@ -4291,7 +4332,7 @@ var writingMode = {
   supportedProperty: function supportedProperty(prop) {
     if (prop !== 'writing-mode') return false;
 
-    if (prefix.js === 'Webkit' || prefix.js === 'ms') {
+    if (prefix.js === 'Webkit' || prefix.js === 'ms' && prefix.browser !== 'edge') {
       return prefix.css + prop;
     }
 
@@ -4658,12 +4699,12 @@ function jssVendorPrefixer() {
       var supportedProp = supportedProperty(prop);
       if (supportedProp && supportedProp !== prop) changeProp = true;
       var changeValue = false;
-      var supportedValue$$1 = supportedValue(supportedProp, toCssValue(value));
-      if (supportedValue$$1 && supportedValue$$1 !== value) changeValue = true;
+      var supportedValue$1 = supportedValue(supportedProp, toCssValue(value));
+      if (supportedValue$1 && supportedValue$1 !== value) changeValue = true;
 
       if (changeProp || changeValue) {
         if (changeProp) delete style[prop];
-        style[supportedProp || prop] = supportedValue$$1 || value;
+        style[supportedProp || prop] = supportedValue$1 || value;
       }
     }
 
@@ -5179,7 +5220,7 @@ var Funnel = function Funnel(props) {
       width: width
     });
   }, [props.data]);
-  return React__default.createElement("div", {
+  return /*#__PURE__*/React__default.createElement("div", {
     ref: funnelRef
   });
 };
@@ -5192,10 +5233,10 @@ Funnel.propTypes = {
   colors: PropTypes.object,
   responsive: PropTypes.bool
 };
-var index$2 = React__default.memo(Funnel);
+var index$2 = /*#__PURE__*/React__default.memo(Funnel);
 
 var Bar = function Bar() {
-  return React__default.createElement("h1", null, "Bar");
+  return /*#__PURE__*/React__default.createElement("h1", null, "Bar");
 };
 
 exports.Bar = Bar;
@@ -6081,7 +6122,7 @@ module.exports = ReactPropTypesSecret;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/** @license React v16.12.0
+/** @license React v16.13.1
  * react-is.development.js
  *
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -6097,8 +6138,6 @@ module.exports = ReactPropTypesSecret;
 if (true) {
   (function() {
 'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
 
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
@@ -6119,69 +6158,15 @@ var REACT_SUSPENSE_TYPE = hasSymbol ? Symbol.for('react.suspense') : 0xead1;
 var REACT_SUSPENSE_LIST_TYPE = hasSymbol ? Symbol.for('react.suspense_list') : 0xead8;
 var REACT_MEMO_TYPE = hasSymbol ? Symbol.for('react.memo') : 0xead3;
 var REACT_LAZY_TYPE = hasSymbol ? Symbol.for('react.lazy') : 0xead4;
+var REACT_BLOCK_TYPE = hasSymbol ? Symbol.for('react.block') : 0xead9;
 var REACT_FUNDAMENTAL_TYPE = hasSymbol ? Symbol.for('react.fundamental') : 0xead5;
 var REACT_RESPONDER_TYPE = hasSymbol ? Symbol.for('react.responder') : 0xead6;
 var REACT_SCOPE_TYPE = hasSymbol ? Symbol.for('react.scope') : 0xead7;
 
 function isValidElementType(type) {
   return typeof type === 'string' || typeof type === 'function' || // Note: its typeof might be other than 'symbol' or 'number' if it's a polyfill.
-  type === REACT_FRAGMENT_TYPE || type === REACT_CONCURRENT_MODE_TYPE || type === REACT_PROFILER_TYPE || type === REACT_STRICT_MODE_TYPE || type === REACT_SUSPENSE_TYPE || type === REACT_SUSPENSE_LIST_TYPE || typeof type === 'object' && type !== null && (type.$$typeof === REACT_LAZY_TYPE || type.$$typeof === REACT_MEMO_TYPE || type.$$typeof === REACT_PROVIDER_TYPE || type.$$typeof === REACT_CONTEXT_TYPE || type.$$typeof === REACT_FORWARD_REF_TYPE || type.$$typeof === REACT_FUNDAMENTAL_TYPE || type.$$typeof === REACT_RESPONDER_TYPE || type.$$typeof === REACT_SCOPE_TYPE);
+  type === REACT_FRAGMENT_TYPE || type === REACT_CONCURRENT_MODE_TYPE || type === REACT_PROFILER_TYPE || type === REACT_STRICT_MODE_TYPE || type === REACT_SUSPENSE_TYPE || type === REACT_SUSPENSE_LIST_TYPE || typeof type === 'object' && type !== null && (type.$$typeof === REACT_LAZY_TYPE || type.$$typeof === REACT_MEMO_TYPE || type.$$typeof === REACT_PROVIDER_TYPE || type.$$typeof === REACT_CONTEXT_TYPE || type.$$typeof === REACT_FORWARD_REF_TYPE || type.$$typeof === REACT_FUNDAMENTAL_TYPE || type.$$typeof === REACT_RESPONDER_TYPE || type.$$typeof === REACT_SCOPE_TYPE || type.$$typeof === REACT_BLOCK_TYPE);
 }
-
-/**
- * Forked from fbjs/warning:
- * https://github.com/facebook/fbjs/blob/e66ba20ad5be433eb54423f2b097d829324d9de6/packages/fbjs/src/__forks__/warning.js
- *
- * Only change is we use console.warn instead of console.error,
- * and do nothing when 'console' is not supported.
- * This really simplifies the code.
- * ---
- * Similar to invariant but only logs a warning if the condition is not met.
- * This can be used to log issues in development environments in critical
- * paths. Removing the logging code for production environments will keep the
- * same logic and follow the same code paths.
- */
-var lowPriorityWarningWithoutStack = function () {};
-
-{
-  var printWarning = function (format) {
-    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-
-    var argIndex = 0;
-    var message = 'Warning: ' + format.replace(/%s/g, function () {
-      return args[argIndex++];
-    });
-
-    if (typeof console !== 'undefined') {
-      console.warn(message);
-    }
-
-    try {
-      // --- Welcome to debugging React ---
-      // This error was thrown as a convenience so that you can use this stack
-      // to find the callsite that caused this warning to fire.
-      throw new Error(message);
-    } catch (x) {}
-  };
-
-  lowPriorityWarningWithoutStack = function (condition, format) {
-    if (format === undefined) {
-      throw new Error('`lowPriorityWarningWithoutStack(condition, format, ...args)` requires a warning ' + 'message argument');
-    }
-
-    if (!condition) {
-      for (var _len2 = arguments.length, args = new Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-        args[_key2 - 2] = arguments[_key2];
-      }
-
-      printWarning.apply(void 0, [format].concat(args));
-    }
-  };
-}
-
-var lowPriorityWarningWithoutStack$1 = lowPriorityWarningWithoutStack;
 
 function typeOf(object) {
   if (typeof object === 'object' && object !== null) {
@@ -6243,8 +6228,9 @@ var hasWarnedAboutDeprecatedIsAsyncMode = false; // AsyncMode should be deprecat
 function isAsyncMode(object) {
   {
     if (!hasWarnedAboutDeprecatedIsAsyncMode) {
-      hasWarnedAboutDeprecatedIsAsyncMode = true;
-      lowPriorityWarningWithoutStack$1(false, 'The ReactIs.isAsyncMode() alias has been deprecated, ' + 'and will be removed in React 17+. Update your code to use ' + 'ReactIs.isConcurrentMode() instead. It has the exact same API.');
+      hasWarnedAboutDeprecatedIsAsyncMode = true; // Using console['warn'] to evade Babel and ESLint
+
+      console['warn']('The ReactIs.isAsyncMode() alias has been deprecated, ' + 'and will be removed in React 17+. Update your code to use ' + 'ReactIs.isConcurrentMode() instead. It has the exact same API.');
     }
   }
 
@@ -6287,7 +6273,6 @@ function isSuspense(object) {
   return typeOf(object) === REACT_SUSPENSE_TYPE;
 }
 
-exports.typeOf = typeOf;
 exports.AsyncMode = AsyncMode;
 exports.ConcurrentMode = ConcurrentMode;
 exports.ContextConsumer = ContextConsumer;
@@ -6301,7 +6286,6 @@ exports.Portal = Portal;
 exports.Profiler = Profiler;
 exports.StrictMode = StrictMode;
 exports.Suspense = Suspense;
-exports.isValidElementType = isValidElementType;
 exports.isAsyncMode = isAsyncMode;
 exports.isConcurrentMode = isConcurrentMode;
 exports.isContextConsumer = isContextConsumer;
@@ -6315,6 +6299,8 @@ exports.isPortal = isPortal;
 exports.isProfiler = isProfiler;
 exports.isStrictMode = isStrictMode;
 exports.isSuspense = isSuspense;
+exports.isValidElementType = isValidElementType;
+exports.typeOf = typeOf;
   })();
 }
 
@@ -6421,11 +6407,11 @@ function (_super) {
     }
   };
 
-  MainPanel.prototype.componentDidUpdate = function (prevProps) {
+  MainPanel.prototype.componentDidUpdate = function (prevProps, prevState) {
     if (prevProps.data.series !== this.props.data.series) {
-      var seriesOld = prevProps.data.series;
       var series = this.props.data.series;
-      var dataOld = Object(_util_helpFunc__WEBPACK_IMPORTED_MODULE_3__["processData"])(seriesOld);
+      if (series.length == 0) return;
+      var dataOld = prevState.data;
       var dataNew = Object(_util_helpFunc__WEBPACK_IMPORTED_MODULE_3__["processData"])(series);
 
       for (var i = 0; i < dataOld.length; i++) {
@@ -6530,7 +6516,7 @@ var processData = function processData(data) {
   var visitors = 0;
 
   for (var i = 0; i < data.length; i++) {
-    var num = data[i].fields[0].values.buffer.reverse().find(function (n) {
+    var num = data[i].fields[0].values.buffer.slice().reverse().find(function (n) {
       return n != null;
     }) || 0;
     total += num;
@@ -6541,10 +6527,10 @@ var processData = function processData(data) {
   }
 
   return [{
-    label: 'Bypassers',
+    label: 'Visitors',
     quantity: total
   }, {
-    label: 'Visitors',
+    label: 'Engaged Customers',
     quantity: visitors
   }, {
     label: 'Returning Customers',

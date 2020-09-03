@@ -5,9 +5,12 @@ import { Funnel } from './Funnel-React/dist';
 import { processData } from './util/helpFunc';
 
 interface Props extends PanelProps<PanelOptions> {}
+interface State {
+  data: Array<{ label: string; quantity: number }>;
+}
 
-export class MainPanel extends PureComponent<Props> {
-  state = {
+export class MainPanel extends PureComponent<Props, State> {
+  state: State = {
     data: [],
   };
 
@@ -19,11 +22,12 @@ export class MainPanel extends PureComponent<Props> {
     }
   }
 
-  componentDidUpdate(prevProps: PanelProps) {
+  componentDidUpdate(prevProps: PanelProps, prevState: State) {
     if (prevProps.data.series !== this.props.data.series) {
-      const seriesOld = prevProps.data.series as Array<Frame>;
       const series = this.props.data.series as Array<Frame>;
-      const dataOld = processData(seriesOld);
+      if (series.length == 0) return;
+
+      const { data: dataOld } = prevState;
       const dataNew = processData(series);
 
       for (let i = 0; i < dataOld.length; i++) {
