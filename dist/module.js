@@ -6514,6 +6514,7 @@ __webpack_require__.r(__webpack_exports__);
 var processData = function processData(data) {
   var total = 0;
   var visitors = 0;
+  console.log('----debug----', data);
 
   for (var i = 0; i < data.length; i++) {
     var num = data[i].fields[0].values.buffer.slice().reverse().find(function (n) {
@@ -6521,8 +6522,8 @@ var processData = function processData(data) {
     }) || 0;
     total += num;
 
-    if (data[i].fields[0].name == '01-180m') {
-      visitors = num;
+    if (data[i].fields[0].name == '60-90m' || data[i].fields[0].name == '90-180m') {
+      visitors += num;
     }
   }
 
