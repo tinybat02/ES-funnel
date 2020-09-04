@@ -25,10 +25,24 @@ export class MainPanel extends PureComponent<Props, State> {
   componentDidUpdate(prevProps: PanelProps, prevState: State) {
     if (prevProps.data.series !== this.props.data.series) {
       const series = this.props.data.series as Array<Frame>;
-      if (series.length == 0) return;
+      if (series.length == 0) {
+        this.setState({
+          data: [
+            { label: 'Visitors', quantity: 0 },
+            { label: 'Engaged Customers', quantity: 0 },
+            { label: 'Returning Customers', quantity: 0 },
+          ],
+        });
+        return;
+      }
 
       const { data: dataOld } = prevState;
       const dataNew = processData(series);
+
+      if (dataOld.length == 0) {
+        this.setState({ data: dataNew });
+        return;
+      }
 
       for (let i = 0; i < dataOld.length; i++) {
         if (dataOld[i].quantity !== dataNew[i].quantity) {

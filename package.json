@@ -15,5 +15,8 @@
     "@grafana/toolkit": "next",
     "@grafana/ui": "next"
   },
-  "dependencies": {}
+  "dependencies": {
+    "date-fns": "^2.16.1",
+    "date-fns-timezone": "^0.1.4"
+  }
 }
